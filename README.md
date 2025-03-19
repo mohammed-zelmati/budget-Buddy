@@ -6,7 +6,7 @@
 ### La gestion financière est un outil contenant des informations sensibles et personnelles. Il ne devrait pas être accessible sans sécurité. Ajouter un module de connexion.
 
 ### L’utilisateur doit être connecté pour avoir accès à son suivi de finance. Si
-# l’utilisateur n’a pas de compte, il faut qu’il puisse s’enregistrer.
+### l’utilisateur n’a pas de compte, il faut qu’il puisse s’enregistrer.
 
 ### Les informations nécessaires à cette inscription sont :
  ➔ Nom
@@ -38,7 +38,7 @@
 #### comme un découvert par exemple.
 
 ### Créer un ou plusieurs comptes banquiers. Chaque banquier peut gérer son
-# portefeuille de clients et réaliser l’ensemble des opérations à sa place.
+### portefeuille de clients et réaliser l’ensemble des opérations à sa place.
 
 ### Compétences techniques
 ➔ Python
