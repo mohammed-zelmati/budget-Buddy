@@ -43,7 +43,6 @@
 # - Des alertes et notifications pour signaler des informations importantes
 # comme un découvert par exemple.
 
-# ++++++++
 # Créer un ou plusieurs comptes banquiers. Chaque banquier peut gérer son
 # portefeuille de clients et réaliser l’ensemble des opérations à sa place.
 
@@ -57,4 +56,5 @@
 # ➔ Concevoir et mettre en place une base de données relationnelle
 # ➔ Développer des composants d'accès aux données SQL et NoSQL
 
-# +++++++
+# ----
+
