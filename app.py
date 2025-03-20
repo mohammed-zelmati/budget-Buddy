@@ -7,6 +7,7 @@ import hashlib
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+
 class GestionFinanciere:
     def __init__(self):
         ctk.set_appearance_mode("System")  # Modes: "System" (default), "Dark", "Light"
@@ -35,6 +36,13 @@ class GestionFinanciere:
         pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.;])[A-Za-z\d@$!%*?&.;]{10,}$"
         return re.match(pattern, password) is not None
 
+    def clear_window(self):
+        for widget in self.root.winfo_children():
+            widget.destroy()
+
+    def run(self):
+        self.root.mainloop()
+    
     def show_login(self):
         self.clear_window()
         frame = ctk.CTkFrame(self.root, corner_radius=10)
@@ -168,7 +176,7 @@ class GestionFinanciere:
                 VALUES (%s, %s, %s, %s, 'dépôt', %s)
             """, (compte[0], reference, description, montant, categorie))
             
-            nouveau_solde = compte[1] + montant
+            nouveau_solde = float(compte[1]) + montant
             self.cursor.execute("UPDATE comptes SET solde = %s WHERE id = %s", (nouveau_solde, compte[0]))
             
             self.db.commit()
@@ -280,19 +288,125 @@ class GestionFinanciere:
         ctk.CTkButton(frame, text="Retour", command=self.show_main_menu).pack(pady=10)
 
     def show_retrait(self):
-        # À implémenter
-        pass
+        self.clear_window()
+        frame = ctk.CTkFrame(self.root, corner_radius=10)
+        frame.place(relx=0.5, rely=0.5, anchor="center")
+
+        ctk.CTkLabel(frame, text="Montant:").grid(row=0, column=0, pady=10, padx=10)
+        self.montant_retrait_entry = ctk.CTkEntry(frame, width=200)
+        self.montant_retrait_entry.grid(row=0, column=1, pady=10, padx=10)
+
+        ctk.CTkLabel(frame, text="Description:").grid(row=1, column=0, pady=10, padx=10)
+        self.desc_retrait_entry = ctk.CTkEntry(frame, width=200)
+        self.desc_retrait_entry.grid(row=1, column=1, pady=10, padx=10)
+
+        ctk.CTkButton(frame, text="Confirmer", command=self.effectuer_retrait).grid(row=2, column=0, pady=10, padx=10)
+        ctk.CTkButton(frame, text="Retour", command=self.show_main_menu).grid(row=2, column=1, pady=10, padx=10)
+
+    def effectuer_retrait(self):
+        try:
+            montant = float(self.montant_retrait_entry.get())
+            description = self.desc_retrait_entry.get()
+            
+            if montant <= 0:
+                messagebox.showerror("Erreur", "Le montant doit être positif")
+                return
+            
+            # Récupérer le compte de l'utilisateur
+            self.cursor.execute("SELECT id, solde FROM comptes WHERE utilisateur_id = %s", (self.utilisateur_id,))
+            compte = self.cursor.fetchone()
+            
+            # Vérifier si le solde est suffisant
+            if compte[1] < montant:
+                messagebox.showerror("Erreur", "Solde insuffisant")
+                return
+            
+            # Créer une référence de retrait unique
+            reference = f"RET{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            
+            # Insérer la transaction de retrait dans la base de données
+            self.cursor.execute("""
+                INSERT INTO transactions (compte_id, reference_transaction, description, montant, type_transaction)
+                VALUES (%s, %s, %s, %s, 'retrait')
+            """, (compte[0], reference, description, montant))
+            
+            # Mettre à jour le solde du compte
+            nouveau_solde = float(compte[1]) - montant
+            self.cursor.execute("UPDATE comptes SET solde = %s WHERE id = %s", (nouveau_solde, compte[0]))
+            
+            # Valider la transaction
+            self.db.commit()
+            messagebox.showinfo("Succès", "Retrait effectué avec succès")
+            
+            self.show_main_menu()
+        except ValueError:
+            messagebox.showerror("Erreur", "Montant invalide")
+
 
     def show_transfert(self):
-        # À implémenter
-        pass
+        self.clear_window()
+        frame = ctk.CTkFrame(self.root, corner_radius=10)
+        frame.place(relx=0.5, rely=0.5, anchor="center")
 
-    def clear_window(self):
-        for widget in self.root.winfo_children():
-            widget.destroy()
+        ctk.CTkLabel(frame, text="Montant:").grid(row=0, column=0, pady=10, padx=10)
+        self.montant_transfert_entry = ctk.CTkEntry(frame, width=200)
+        self.montant_transfert_entry.grid(row=0, column=1, pady=10, padx=10)
 
-    def run(self):
-        self.root.mainloop()
+        ctk.CTkLabel(frame, text="Compte destinataire:").grid(row=1, column=0, pady=10, padx=10)
+        self.compte_dest_entry = ctk.CTkEntry(frame, width=200)
+        self.compte_dest_entry.grid(row=1, column=1, pady=10, padx=10)
+
+        ctk.CTkButton(frame, text="Confirmer", command=self.effectuer_transfert).grid(row=2, column=0, pady=10, padx=10)
+        ctk.CTkButton(frame, text="Retour", command=self.show_main_menu).grid(row=2, column=1, pady=10, padx=10)
+
+    def effectuer_transfert(self):
+        try:
+            montant = float(self.montant_transfert_entry.get())
+            compte_dest = self.compte_dest_entry.get()
+
+            if montant <= 0:
+                messagebox.showerror("Erreur", "Le montant doit être positif")
+                return
+
+            # Récupérer le compte source
+            self.cursor.execute("SELECT id, solde FROM comptes WHERE utilisateur_id = %s", (self.utilisateur_id,))
+            compte_source = self.cursor.fetchone()
+
+            # Vérifier si le solde est suffisant
+            if compte_source[1] < montant:
+                messagebox.showerror("Erreur", "Solde insuffisant")
+                return
+
+            # Récupérer le compte destinataire
+            self.cursor.execute("SELECT id FROM comptes WHERE numero_compte = %s", (compte_dest,))
+            compte_dest_id = self.cursor.fetchone()
+
+            if not compte_dest_id:
+                messagebox.showerror("Erreur", "Compte destinataire non trouvé")
+                return
+
+            # Créer une référence de transfert unique
+            reference = f"TRF{datetime.now().strftime('%Y%m%d%H%M%S')}"
+
+            # Insérer la transaction de transfert dans la base de données
+            self.cursor.execute("""
+                INSERT INTO transferts (compte_source_id, compte_dest_id, montant)
+                VALUES (%s, %s, %s)
+            """, (compte_source[0], compte_dest_id[0], montant))
+
+            # Mettre à jour les soldes des deux comptes
+            nouveau_solde_source = compte_source[1] - montant
+            self.cursor.execute("UPDATE comptes SET solde = %s WHERE id = %s", (nouveau_solde_source, compte_source[0]))
+
+            # On suppose qu'on n'a pas de montant négatif sur le compte destinataire pour une mise à jour
+            self.cursor.execute("UPDATE comptes SET solde = solde + %s WHERE id = %s", (montant, compte_dest_id[0]))
+
+            # Valider la transaction
+            self.db.commit()
+            messagebox.showinfo("Succès", "Transfert effectué avec succès")
+            self.show_main_menu()
+        except ValueError:
+            messagebox.showerror("Erreur", "Montant invalide")
 
 if __name__ == "__main__":
     app = GestionFinanciere()
