@@ -1,4 +1,4 @@
--- BASE DE DONNEES 
+-- BASE DE DONNEES "base1"
 CREATE TABLE utilisateurs (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nom VARCHAR(50) NOT NULL,
@@ -57,4 +57,12 @@ CREATE TABLE portefeuille (
     FOREIGN KEY (compte_id) REFERENCES comptes(id) ON DELETE CASCADE
 );
 
+CREATE TABLE alertes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    utilisateur_id INT NOT NULL,
+    type_alert VARCHAR(50),
+    message TEXT,
+    date_alert TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id) ON DELETE CASCADE
+);
 

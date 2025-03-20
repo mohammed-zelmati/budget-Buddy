@@ -2,7 +2,7 @@ from accountBank import AccountBank
 from user import User
 from connect import Connect
 from transaction import Transaction
-from gui import GUI
+from corbeille.gui import GUI
 from banker import Banker
 
 class Main:
