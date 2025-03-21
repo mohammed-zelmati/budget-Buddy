@@ -6,7 +6,7 @@ from datetime import datetime
 import hashlib
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
+from decimal import Decimal
 
 class GestionFinanciere:
     def __init__(self):
@@ -229,27 +229,39 @@ class GestionFinanciere:
             WHERE c.utilisateur_id = %s
         """
         params = [self.utilisateur_id]
-        
         conditions = []
+        
+        # Filtrage sur la date de début
         if self.date_debut.get():
             conditions.append("t.date_transaction >= %s")
             params.append(self.date_debut.get())
+        
+        # Filtrage sur la date de fin
         if self.date_fin.get():
             conditions.append("t.date_transaction <= %s")
             params.append(self.date_fin.get())
+        
+        # Filtrage sur la catégorie
         if self.cat_filter.get():
             conditions.append("t.categorie = %s")
             params.append(self.cat_filter.get())
+        
+        # Filtrage sur le type de transaction (retrait, dépôt, transfert)
         if self.type_filter.get():
             conditions.append("t.type_transaction = %s")
             params.append(self.type_filter.get())
-
+        
+        # Ajouter les conditions à la requête si elles existent
         if conditions:
             query += " AND " + " AND ".join(conditions)
-
+        
+        # Exécuter la requête
         self.cursor.execute(query, params)
+        
+        # Insérer les résultats dans le Treeview
         for row in self.cursor.fetchall():
             self.tree.insert('', 'end', values=row)
+
 
     def show_vue_globale(self):
         self.clear_window()
@@ -361,7 +373,7 @@ class GestionFinanciere:
 
     def effectuer_transfert(self):
         try:
-            montant = float(self.montant_transfert_entry.get())
+            montant = Decimal(self.montant_transfert_entry.get())
             compte_dest = self.compte_dest_entry.get()
 
             if montant <= 0:
@@ -377,8 +389,8 @@ class GestionFinanciere:
                 messagebox.showerror("Erreur", "Solde insuffisant")
                 return
 
-            # Récupérer le compte destinataire
-            self.cursor.execute("SELECT id FROM comptes WHERE numero_compte = %s", (compte_dest,))
+            # Récupérer le compte destinataire avec son solde
+            self.cursor.execute("SELECT id, solde FROM comptes WHERE numero_compte = %s", (compte_dest,))
             compte_dest_id = self.cursor.fetchone()
 
             if not compte_dest_id:
@@ -393,20 +405,30 @@ class GestionFinanciere:
                 INSERT INTO transferts (compte_source_id, compte_dest_id, montant)
                 VALUES (%s, %s, %s)
             """, (compte_source[0], compte_dest_id[0], montant))
+            
+            # Insérer une transaction de type "transfert" dans la table transactions
+            self.cursor.execute("""
+                INSERT INTO transactions (compte_id, reference_transaction, description, montant, type_transaction)
+                VALUES (%s, %s, %s, %s, 'transfert')
+            """, (compte_source[0], reference, f"Transfert vers {compte_dest}", montant))
 
             # Mettre à jour les soldes des deux comptes
-            nouveau_solde_source = compte_source[1] - montant
+            nouveau_solde_source = Decimal(compte_source[1]) - montant
             self.cursor.execute("UPDATE comptes SET solde = %s WHERE id = %s", (nouveau_solde_source, compte_source[0]))
 
-            # On suppose qu'on n'a pas de montant négatif sur le compte destinataire pour une mise à jour
-            self.cursor.execute("UPDATE comptes SET solde = solde + %s WHERE id = %s", (montant, compte_dest_id[0]))
+            # Mettre à jour le solde du compte destinataire
+            nouveau_solde_dest = Decimal(compte_dest_id[1]) + montant
+            self.cursor.execute("UPDATE comptes SET solde = %s WHERE id = %s", (nouveau_solde_dest, compte_dest_id[0]))
 
             # Valider la transaction
             self.db.commit()
+
             messagebox.showinfo("Succès", "Transfert effectué avec succès")
             self.show_main_menu()
+
         except ValueError:
             messagebox.showerror("Erreur", "Montant invalide")
+
 
 if __name__ == "__main__":
     app = GestionFinanciere()
