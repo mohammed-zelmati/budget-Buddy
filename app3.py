@@ -498,6 +498,6 @@ class GestionFinanciere:
             messagebox.showerror("Erreur", str(e))
 
 if __name__ == "__main__":
-    
+       
     app = GestionFinanciere()
     app.run()
